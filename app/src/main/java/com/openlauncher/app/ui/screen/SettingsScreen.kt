@@ -33,7 +33,6 @@ import com.openlauncher.app.data.ShortcutConfig
 import com.openlauncher.app.data.GradientDirection
 import com.openlauncher.app.data.UnitSystem
 import com.openlauncher.app.ui.theme.LocalDayMode
-import com.openlauncher.app.util.SunriseSunset
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import com.openlauncher.app.ui.components.ColorPickerDialog
@@ -51,9 +50,9 @@ fun SettingsScreen(
 ) {
     val context = LocalContext.current
     var showResetDialog       by remember { mutableStateOf(false) }
-    var showAccentPicker      by remember { mutableStateOf(false) }
-    var showBgPicker          by remember { mutableStateOf(false) }
-    var showGradientEndPicker by remember { mutableStateOf(false) }
+    var showWidgetPicker      by remember { mutableStateOf(false) }
+    var showTileBGPicker      by remember { mutableStateOf(false) }
+    var showBgPicker          by remember { mutableIntStateOf(0) }
     var showFontColorPicker   by remember { mutableStateOf(false) }
 
     // OpenDocument (not GetContent): only SAF document URIs carry a persistable
@@ -425,18 +424,52 @@ fun SettingsScreen(
 
             SettingsDivider()
 
-            // Accent color
+            // Controls color
             SettingsRow(
-                label    = "Accent Color",
-                sublabel = "UI highlight color",
+                label    = "Controls Color",
+                sublabel = "UI widget and control primary color",
                 icon     = Icons.Default.Palette
             ) {
                 Box(
                     modifier = Modifier
                         .size(32.dp)
                         .clip(RoundedCornerShape(8.dp))
-                        .background(Color(settings.accentColor))
-                        .clickable { showAccentPicker = true }
+                        .background(if (isDayMode) Color(settings.lightWidgetColor) else Color(settings.darkWidgetColor))
+                        .clickable { showWidgetPicker = true }
+                )
+            }
+
+            SettingsDivider()
+
+            // Tile background color
+            SettingsRow(
+                label    = "Tile Color",
+                sublabel = "Background color for tiles",
+                icon     = Icons.Default.Palette
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(if (isDayMode) Color(settings.lightTileColor) else Color(settings.darkTileColor))
+                        .clickable { showTileBGPicker = true }
+                )
+            }
+
+            SettingsDivider()
+
+            // Font Color row
+            SettingsRow(
+                label    = "Font Color",
+                sublabel = "Base color for text",
+                icon     = Icons.Default.FormatSize
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(if (isDayMode) Color(settings.lightFontColor) else Color(settings.darkFontColor))
+                        .clickable { showFontColorPicker = true }
                 )
             }
 
@@ -444,7 +477,7 @@ fun SettingsScreen(
 
             // Background color + gradient
             SettingsRow(
-                label    = "Background",
+                label    = "Background Color",
                 sublabel = if (settings.useGradient) "Gradient" else "Solid color",
                 icon     = Icons.Default.FormatColorFill
             ) {
@@ -457,8 +490,8 @@ fun SettingsScreen(
                         modifier = Modifier
                             .size(28.dp)
                             .clip(RoundedCornerShape(4.dp))
-                            .background(Color(settings.backgroundColor))
-                            .clickable { showBgPicker = true }
+                            .background(if (isDayMode) Color(settings.lightBGColor1) else Color(settings.darkBGColor1))
+                            .clickable { showBgPicker = 1 }
                     )
                     if (settings.useGradient) {
                         androidx.compose.material3.Icon(
@@ -470,45 +503,11 @@ fun SettingsScreen(
                             modifier = Modifier
                                 .size(28.dp)
                                 .clip(RoundedCornerShape(4.dp))
-                                .background(Color(settings.gradientEndColor))
-                                .clickable { showGradientEndPicker = true }
+                                .background(if (isDayMode) Color(settings.lightBGColor2) else Color(settings.darkBGColor2))
+                                .clickable { showBgPicker = 2 }
                         )
                     }
-                    if (settings.useCustomBackgroundColor) {
-                        TextButton(
-                            onClick = {
-                                onUpdate {
-                                    copy(
-                                        useCustomBackgroundColor = false,
-                                        backgroundColor = Color.Black.toArgb(),
-                                        useGradient = false
-                                    )
-                                }
-                            },
-                            contentPadding = PaddingValues(horizontal = 6.dp),
-                            modifier = Modifier.height(28.dp)
-                        ) {
-                            Text("DEFAULT", color = accent, fontSize = 9.sp, letterSpacing = 1.sp)
-                        }
-                    }
                 }
-            }
-
-            SettingsDivider()
-
-            // Font Color row
-            SettingsRow(
-                label    = "Font Color",
-                sublabel = "Custom text color in dark mode",
-                icon     = Icons.Default.FormatSize
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(32.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(Color(settings.fontColor))
-                        .clickable { showFontColorPicker = true }
-                )
             }
 
             SettingsDivider()
@@ -650,13 +649,53 @@ fun SettingsScreen(
                 ) {}
                 Slider(
                     value         = settings.uiScale,
-                    onValueChange = { onUpdate { copy(uiScale = it) } },
+                    onValueChange = {
+                        onUpdate { copy(uiScale = it) }
+                    },
                     valueRange    = 0.7f..1.5f,
                     steps         = 7,
                     colors        = sliderColors(accent),
                     modifier      = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
                 )
             }
+
+            SettingsDivider()
+
+            Column {
+                SettingsRow(
+                    label    = "Tile Count Width",
+                    sublabel = "%d".format(settings.uiTilesWidth),
+                    icon     = Icons.Default.VerticalSplit
+                ) {}
+                Slider(
+                    value         = settings.uiTilesWidth*1.0f,
+                    onValueChange = { onUpdate { copy(uiTilesWidth = it.toInt() ) } },
+                    valueRange    = 2.0f..6.0f,
+                    steps         = 3,
+                    colors        = sliderColors(accent),
+                    modifier      = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+                )
+            }
+
+            SettingsDivider()
+
+            Column {
+                SettingsRow(
+                    label    = "Tile Count Height",
+                    sublabel = "%d".format(settings.uiTilesHeight),
+                    icon     = Icons.Default.HorizontalSplit
+                ) {}
+                Slider(
+                    value         = settings.uiTilesHeight*1.0f,
+                    onValueChange = { onUpdate { copy(uiTilesHeight = it.toInt() ) } },
+                    valueRange    = 2.0f..6.0f,
+                    steps         = 3,
+                    colors        = sliderColors(accent),
+                    modifier      = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+                )
+            }
+
+            SettingsDivider()
         }
 
         // ── GPS & Calibration ───────────────────────────────────────────────
@@ -753,7 +792,7 @@ fun SettingsScreen(
                 icon     = Icons.Default.SystemUpdate,
                 accent   = accent,
                 onClick  = {
-                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/dw2lam/openlauncher/releases"))
+                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/sammyrc34/openlauncher/releases"))
                     context.startActivity(intent)
                 }
             )
@@ -800,52 +839,50 @@ fun SettingsScreen(
         )
     }
 
-    if (showAccentPicker) {
+    if (showWidgetPicker) {
         ColorPickerDialog(
-            title           = "Accent Color",
-            initialColor    = Color(settings.accentColor),
-            onColorSelected = { c -> onUpdate { copy(accentColor = c.toArgb()) } },
-            onDismiss       = { showAccentPicker = false }
+            title           = "Widget Color",
+            initialColor    = if (isDayMode) Color(settings.lightWidgetColor) else Color(settings.darkWidgetColor),
+            onColorSelected = { c -> onUpdate { if (isDayMode) copy( lightWidgetColor = c.toArgb()) else copy( darkWidgetColor = c.toArgb()) } },
+            onDismiss       = { showWidgetPicker = false }
         )
     }
 
-    if (showBgPicker) {
+    if (showTileBGPicker) {
+        ColorPickerDialog(
+            title           = "Tile Background Color",
+            initialColor    = if (isDayMode) Color(settings.lightTileColor) else Color(settings.darkTileColor),
+            onColorSelected = { c -> onUpdate { if (isDayMode) copy( lightTileColor = c.toArgb()) else copy( darkTileColor = c.toArgb()) } },
+            onDismiss       = { showTileBGPicker = false }
+        )
+    }
+
+    if (showBgPicker > 0) {
         ColorPickerDialog(
             title           = "Background Color",
-            initialColor    = Color(settings.backgroundColor),
+            initialColor    =
+                if (isDayMode)
+                    if (showBgPicker == 1) Color(settings.lightBGColor1) else Color(settings.lightBGColor2)
+                else
+                    if (showBgPicker == 1) Color(settings.darkBGColor1) else Color(settings.darkBGColor2)
+            ,
             onColorSelected = { c -> 
-                onUpdate { 
-                    copy(
-                        backgroundColor = c.toArgb(),
-                        useCustomBackgroundColor = true
-                    ) 
-                } 
+                onUpdate {
+                    if (isDayMode)
+                        if (showBgPicker == 1) copy(lightBGColor1 = c.toArgb()) else copy(lightBGColor2 = c.toArgb())
+                    else
+                        if (showBgPicker == 1) copy(darkBGColor1 = c.toArgb()) else copy(darkBGColor2 = c.toArgb())
+                }
             },
-            onDismiss       = { showBgPicker = false }
-        )
-    }
-
-    if (showGradientEndPicker) {
-        ColorPickerDialog(
-            title           = "Gradient End Color",
-            initialColor    = Color(settings.gradientEndColor),
-            onColorSelected = { c -> 
-                onUpdate { 
-                    copy(
-                        gradientEndColor = c.toArgb(),
-                        useCustomBackgroundColor = true
-                    ) 
-                } 
-            },
-            onDismiss       = { showGradientEndPicker = false }
+            onDismiss       = { showBgPicker = 0 }
         )
     }
 
     if (showFontColorPicker) {
         ColorPickerDialog(
-            title           = "Font Color",
-            initialColor    = Color(settings.fontColor),
-            onColorSelected = { c -> onUpdate { copy(fontColor = c.toArgb()) } },
+            title           = "Text Color",
+            initialColor    = if (isDayMode) Color(settings.lightFontColor) else Color(settings.darkFontColor),
+            onColorSelected = { c -> onUpdate { if (isDayMode) copy( lightFontColor = c.toArgb()) else copy( darkFontColor = c.toArgb()) } },
             onDismiss       = { showFontColorPicker = false }
         )
     }

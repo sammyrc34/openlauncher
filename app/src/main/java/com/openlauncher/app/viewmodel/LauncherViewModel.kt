@@ -15,11 +15,8 @@ import androidx.lifecycle.viewModelScope
 import com.openlauncher.app.data.AppSettings
 import com.openlauncher.app.data.DayNightMode
 import com.openlauncher.app.data.DefaultShortcutIcon
-import com.openlauncher.app.data.GRID_COLS
-import com.openlauncher.app.data.GRID_ROWS
 import com.openlauncher.app.data.SettingsRepository
 import com.openlauncher.app.data.ShortcutConfig
-import com.openlauncher.app.data.SoundPadConfig
 import com.openlauncher.app.data.WeatherApi
 import com.openlauncher.app.data.activeWidgetIds
 import com.openlauncher.app.data.computeWidgetMove
@@ -161,8 +158,8 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         updateSettings {
             val resized = widgetLayout.map { w ->
                 if (w.id == id) w.copy(
-                    spanX = spanX.coerceIn(1, GRID_COLS - w.gridX),
-                    spanY = spanY.coerceIn(1, GRID_ROWS - w.gridY)
+                    spanX = spanX.coerceIn(1, uiTilesWidth - w.gridX),
+                    spanY = spanY.coerceIn(1, uiTilesHeight - w.gridY)
                 ) else w
             }
             // Re-run collision resolution so enlarging a widget pushes neighbors
@@ -172,7 +169,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             val inactive  = resized.filter { !it.enabled || it.id !in activeIds }
             val target    = active.find { it.id == id }
             copy(widgetLayout = if (target != null)
-                computeWidgetMove(active, id, target.gridX, target.gridY) + inactive
+                computeWidgetMove(active, id, target.gridX, target.gridY, uiTilesWidth, uiTilesHeight) + inactive
             else resized)
         }
     }
@@ -182,7 +179,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             val activeIds = activeWidgetIds()
             val active   = widgetLayout.filter { it.enabled && it.id in activeIds }
             val inactive = widgetLayout.filter { !it.enabled || it.id !in activeIds }
-            copy(widgetLayout = computeWidgetMove(active, id, gridX, gridY) + inactive)
+            copy(widgetLayout = computeWidgetMove(active, id, gridX, gridY, uiTilesWidth, uiTilesHeight) + inactive)
         }
     }
 
@@ -190,7 +187,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         updateSettings {
             val activeIds = activeWidgetIds()
             var layout    = widgetLayout
-            var cell      = freeCellIn(layout, activeIds)
+            var cell      = freeCellIn(layout, activeIds, uiTilesWidth, uiTilesHeight )
 
             // If grid is full, shrink the largest multi-cell widget by one span to make room
             if (cell == null) {
@@ -203,7 +200,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                             if (w.spanY > 1) w.copy(spanY = w.spanY - 1) else w.copy(spanX = w.spanX - 1)
                         else w
                     }
-                    cell = freeCellIn(layout, activeIds)
+                    cell = freeCellIn(layout, activeIds, uiTilesWidth, uiTilesHeight )
                 }
             }
 
@@ -218,7 +215,6 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                 "SPEEDOMETER" -> copy(showSpeedometer = true)
                 "VITALS"      -> copy(showVitals = true)
                 "TRIP_TRACKER" -> copy(showTripTracker = true)
-                "SOUNDBOARD"  -> copy(showSoundboard = true)
                 else          -> this
             }
             val idx       = layout.indexOfFirst { it.id == id }
@@ -226,7 +222,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                 val w = list[idx]
                 // Try to keep the widget's previous span; if no free area fits it,
                 // fall back to 1×1 at the free cell so it can't overlap neighbors
-                val area = if (w.spanX > 1 || w.spanY > 1) freeAreaIn(layout, activeIds, w.spanX, w.spanY) else null
+                val area = if (w.spanX > 1 || w.spanY > 1) freeAreaIn(layout, activeIds, w.spanX, w.spanY, uiTilesWidth, uiTilesHeight ) else null
                 list[idx] = if (area != null)
                     w.copy(enabled = true, gridX = area.first, gridY = area.second)
                 else
@@ -249,41 +245,34 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                 "SPEEDOMETER" -> copy(showSpeedometer = false)
                 "VITALS"      -> copy(showVitals = false)
                 "TRIP_TRACKER" -> copy(showTripTracker = false)
-                "SOUNDBOARD"  -> copy(showSoundboard = false)
                 else          -> this
             }
         }
     }
 
-    fun updateSoundboardPad(index: Int, pad: SoundPadConfig) {
-        updateSettings {
-            // Persisted lists from older versions may be shorter than the 6 pads
-            // the widget displays — pad before assigning to avoid IndexOutOfBounds
-            val padded = soundboardPads.toMutableList()
-            while (padded.size <= index) padded.add(SoundPadConfig("+", synthType = ""))
-            padded[index] = pad
-            copy(soundboardPads = padded)
-        }
-    }
-
     private fun freeCellIn(
-        layout: List<com.openlauncher.app.data.WidgetConfig>,
-        activeIds: Set<String>
-    ): Pair<Int, Int>? = freeAreaIn(layout, activeIds, 1, 1)
+        widgetLayout: List<com.openlauncher.app.data.WidgetConfig>,
+        activeIds: Set<String>,
+        gridX: Int,
+        gridY: Int
+    ): Pair<Int, Int>? = freeAreaIn(widgetLayout, activeIds, 1, 1, gridX, gridY)
 
     private fun freeAreaIn(
         layout: List<com.openlauncher.app.data.WidgetConfig>,
         activeIds: Set<String>,
         spanX: Int,
-        spanY: Int
+        spanY: Int,
+        gridX: Int,
+        gridY: Int
     ): Pair<Int, Int>? {
+        val settings: AppSettings
         val occupied = buildSet<Pair<Int, Int>> {
             layout.filter { it.enabled && it.id in activeIds }.forEach { w ->
                 for (dx in 0 until w.spanX) for (dy in 0 until w.spanY) add(w.gridX + dx to w.gridY + dy)
             }
         }
-        for (row in 0 until GRID_ROWS) for (col in 0 until GRID_COLS) {
-            if (col + spanX > GRID_COLS || row + spanY > GRID_ROWS) continue
+        for (row in 0 until gridY ) for (col in 0 until gridX ) {
+            if (col + spanX > gridX || row + spanY > gridY ) continue
             if ((0 until spanX).all { dx -> (0 until spanY).all { dy -> (col + dx to row + dy) !in occupied } })
                 return col to row
         }

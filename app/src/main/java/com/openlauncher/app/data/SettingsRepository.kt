@@ -18,14 +18,23 @@ class SettingsRepository(private val context: Context) {
     private val gson = Gson()
 
     private object Keys {
+        val LIGHT_COLOR_WIDGET = intPreferencesKey("light_color_widget")
+        val LIGHT_COLOR_TILE   = intPreferencesKey("light_color_tile")
+        val LIGHT_COLOR_FONT   = intPreferencesKey("light_color_font")
+        val LIGHT_COLOR_BG1    = intPreferencesKey("light_color_bg1")
+        val LIGHT_COLOR_BG2    = intPreferencesKey("light_color_bg2")
+        val DARK_COLOR_WIDGET  = intPreferencesKey("dark_color_widget")
+        val DARK_COLOR_TILE    = intPreferencesKey("dark_color_tile")
+        val DARK_COLOR_FONT    = intPreferencesKey("dark_color_font")
+        val DARK_COLOR_BG1     = intPreferencesKey("dark_color_bg1")
+        val DARK_COLOR_BG2     = intPreferencesKey("dark_color_bg2")
         val VEHICLE_NAME       = stringPreferencesKey("vehicle_name")
-        val ACCENT_COLOR       = intPreferencesKey("accent_color")
-        val BG_COLOR           = intPreferencesKey("bg_color")
-        val FONT_COLOR         = intPreferencesKey("font_color")
         val WALLPAPER_URI      = stringPreferencesKey("wallpaper_uri")
         val FONT_BOLD          = booleanPreferencesKey("font_bold")
         val TEXT_SCALE         = floatPreferencesKey("text_scale")
         val UI_SCALE           = floatPreferencesKey("ui_scale")
+        val UI_TILES_WIDE      = intPreferencesKey("ui_tiles_wide")
+        val UI_TILES_HIGH      = intPreferencesKey("ui_tiles_high")
         val CLOCK_STYLE        = stringPreferencesKey("clock_style")
         val UNIT_SYSTEM        = stringPreferencesKey("unit_system")
         val APP_FONT           = stringPreferencesKey("app_font")
@@ -40,7 +49,6 @@ class SettingsRepository(private val context: Context) {
         val CAR_PLAY_PACKAGE      = stringPreferencesKey("car_play_package")
         val ANDROID_AUTO_PACKAGE  = stringPreferencesKey("android_auto_package")
         val USE_GRADIENT          = booleanPreferencesKey("use_gradient")
-        val GRADIENT_END_COLOR    = intPreferencesKey("gradient_end_color")
         val WALLPAPER_DIM         = floatPreferencesKey("wallpaper_dim")
         val RIGHT_HAND_DRIVE      = booleanPreferencesKey("right_hand_drive") // kept for migration
         val SIDEBAR_POSITION           = stringPreferencesKey("sidebar_position")
@@ -53,12 +61,9 @@ class SettingsRepository(private val context: Context) {
         val SHOW_VITALS           = booleanPreferencesKey("show_vitals")
         val SHOW_TRIP_TRACKER     = booleanPreferencesKey("show_trip_tracker")
         val COMPASS_OFFSET        = floatPreferencesKey("compass_offset")
-        val SHOW_SOUNDBOARD       = booleanPreferencesKey("show_soundboard")
-        val SOUNDBOARD_PADS_JSON  = stringPreferencesKey("soundboard_pads_json")
         val VITALS_AS_BARS        = booleanPreferencesKey("vitals_as_bars")
         val SPEEDOMETER_DIGITAL_ONLY = booleanPreferencesKey("speedometer_digital_only")
         val GRADIENT_DIRECTION    = stringPreferencesKey("gradient_direction")
-        val USE_CUSTOM_BG_COLOR   = booleanPreferencesKey("use_custom_bg_color")
     }
 
     val settingsFlow: Flow<AppSettings> = context.dataStore.data
@@ -90,51 +95,52 @@ class SettingsRepository(private val context: Context) {
             } else defaults.widgetLayout
 
             return AppSettings(
-                vehicleName    = prefs[Keys.VEHICLE_NAME]     ?: defaults.vehicleName,
-                accentColor    = prefs[Keys.ACCENT_COLOR]     ?: defaults.accentColor,
-                backgroundColor = prefs[Keys.BG_COLOR]        ?: defaults.backgroundColor,
-                fontColor      = prefs[Keys.FONT_COLOR]       ?: defaults.fontColor,
-                wallpaperUri   = prefs[Keys.WALLPAPER_URI]    ?: defaults.wallpaperUri,
-                fontBold       = prefs[Keys.FONT_BOLD]        ?: defaults.fontBold,
-                textScale      = prefs[Keys.TEXT_SCALE]       ?: defaults.textScale,
-                uiScale        = prefs[Keys.UI_SCALE]         ?: defaults.uiScale,
-                clockStyle     = prefs[Keys.CLOCK_STYLE]?.let { runCatching { ClockStyle.valueOf(it) }.getOrNull() } ?: defaults.clockStyle,
-                unitSystem     = prefs[Keys.UNIT_SYSTEM]?.let { runCatching { UnitSystem.valueOf(it) }.getOrNull() } ?: defaults.unitSystem,
-                appFont        = prefs[Keys.APP_FONT]?.let { runCatching { AppFont.valueOf(it) }.getOrNull() } ?: defaults.appFont,
-                showWeather    = prefs[Keys.SHOW_WEATHER]     ?: defaults.showWeather,
-                showClock      = prefs[Keys.SHOW_CLOCK]       ?: defaults.showClock,
-                showTelemetry  = prefs[Keys.SHOW_TELEMETRY]   ?: defaults.showTelemetry,
-                showNowPlaying = prefs[Keys.SHOW_NOW_PLAYING] ?: defaults.showNowPlaying,
-                showAltimeter   = prefs[Keys.SHOW_ALTIMETER]   ?: defaults.showAltimeter,
-                showSpeedometer = prefs[Keys.SHOW_SPEEDOMETER] ?: defaults.showSpeedometer,
-                shortcuts      = shortcuts,
-                widgetLayout   = widgets,
+                vehicleName      = prefs[Keys.VEHICLE_NAME]        ?: defaults.vehicleName,
+                lightWidgetColor = prefs[Keys.LIGHT_COLOR_WIDGET]  ?: defaults.lightWidgetColor,
+                lightTileColor   = prefs[Keys.LIGHT_COLOR_TILE]    ?: defaults.lightTileColor,
+                lightBGColor1    = prefs[Keys.LIGHT_COLOR_BG1]     ?: defaults.lightBGColor1,
+                lightBGColor2    = prefs[Keys.LIGHT_COLOR_BG1]     ?: defaults.lightBGColor2,
+                lightFontColor   = prefs[Keys.LIGHT_COLOR_FONT]    ?: defaults.lightFontColor,
+                darkWidgetColor  = prefs[Keys.DARK_COLOR_WIDGET]   ?: defaults.darkWidgetColor,
+                darkTileColor    = prefs[Keys.DARK_COLOR_TILE]     ?: defaults.darkTileColor,
+                darkBGColor1     = prefs[Keys.DARK_COLOR_BG1]      ?: defaults.darkBGColor1,
+                darkBGColor2     = prefs[Keys.DARK_COLOR_BG1]      ?: defaults.darkBGColor2,
+                darkFontColor    = prefs[Keys.DARK_COLOR_FONT]     ?: defaults.darkFontColor,
+                wallpaperUri     = prefs[Keys.WALLPAPER_URI]       ?: defaults.wallpaperUri,
+                fontBold         = prefs[Keys.FONT_BOLD]           ?: defaults.fontBold,
+                textScale        = prefs[Keys.TEXT_SCALE]          ?: defaults.textScale,
+                uiScale          = prefs[Keys.UI_SCALE]            ?: defaults.uiScale,
+                uiTilesWidth     = prefs[Keys.UI_TILES_WIDE]       ?: defaults.uiTilesWidth,
+                uiTilesHeight    = prefs[Keys.UI_TILES_HIGH]       ?: defaults.uiTilesHeight,
+                clockStyle       = prefs[Keys.CLOCK_STYLE]?.let { runCatching { ClockStyle.valueOf(it) }.getOrNull() } ?: defaults.clockStyle,
+                unitSystem       = prefs[Keys.UNIT_SYSTEM]?.let { runCatching { UnitSystem.valueOf(it) }.getOrNull() } ?: defaults.unitSystem,
+                appFont          = prefs[Keys.APP_FONT]?.let { runCatching { AppFont.valueOf(it) }.getOrNull() } ?: defaults.appFont,
+                showWeather      = prefs[Keys.SHOW_WEATHER]        ?: defaults.showWeather,
+                showClock        = prefs[Keys.SHOW_CLOCK]          ?: defaults.showClock,
+                showTelemetry    = prefs[Keys.SHOW_TELEMETRY]      ?: defaults.showTelemetry,
+                showNowPlaying   = prefs[Keys.SHOW_NOW_PLAYING]    ?: defaults.showNowPlaying,
+                showAltimeter    = prefs[Keys.SHOW_ALTIMETER]      ?: defaults.showAltimeter,
+                showSpeedometer  = prefs[Keys.SHOW_SPEEDOMETER]    ?: defaults.showSpeedometer,
+                shortcuts        = shortcuts,
+                widgetLayout     = widgets,
                 carPlayPackage      = prefs[Keys.CAR_PLAY_PACKAGE]      ?: defaults.carPlayPackage,
                 androidAutoPackage  = prefs[Keys.ANDROID_AUTO_PACKAGE]  ?: defaults.androidAutoPackage,
                 useGradient      = prefs[Keys.USE_GRADIENT]        ?: defaults.useGradient,
-                gradientEndColor = prefs[Keys.GRADIENT_END_COLOR]  ?: defaults.gradientEndColor,
                 wallpaperDim     = prefs[Keys.WALLPAPER_DIM]       ?: defaults.wallpaperDim,
                 sidebarPosition  = prefs[Keys.SIDEBAR_POSITION]?.let { runCatching { SidebarPosition.valueOf(it) }.getOrNull() }
                                    ?: if (prefs[Keys.RIGHT_HAND_DRIVE] == true) SidebarPosition.RIGHT else defaults.sidebarPosition,
                 bottomBarShortcutsRight = prefs[Keys.BOTTOM_BAR_SHORTCUTS_RIGHT] ?: defaults.bottomBarShortcutsRight,
                 dayNightMode     = prefs[Keys.DAY_NIGHT_MODE]?.let { runCatching { DayNightMode.valueOf(it) }.getOrNull() } ?: defaults.dayNightMode,
-                showPip          = prefs[Keys.SHOW_PIP]         ?: defaults.showPip,
-                pipAppPackage    = prefs[Keys.PIP_APP_PACKAGE]  ?: defaults.pipAppPackage,
-                radioPackage     = prefs[Keys.RADIO_PACKAGE]    ?: defaults.radioPackage,
+                showPip          = prefs[Keys.SHOW_PIP]            ?: defaults.showPip,
+                pipAppPackage    = prefs[Keys.PIP_APP_PACKAGE]     ?: defaults.pipAppPackage,
+                radioPackage     = prefs[Keys.RADIO_PACKAGE]       ?: defaults.radioPackage,
                 onboardingCompleted = prefs[Keys.ONBOARDING_COMPLETED] ?: defaults.onboardingCompleted,
-                showVitals       = prefs[Keys.SHOW_VITALS]      ?: defaults.showVitals,
-                showTripTracker  = prefs[Keys.SHOW_TRIP_TRACKER] ?: defaults.showTripTracker,
-                compassOffset    = prefs[Keys.COMPASS_OFFSET]    ?: defaults.compassOffset,
-                showSoundboard   = prefs[Keys.SHOW_SOUNDBOARD]   ?: defaults.showSoundboard,
-                soundboardPads   = prefs[Keys.SOUNDBOARD_PADS_JSON]?.let {
-                    runCatching {
-                        gson.fromJson<List<SoundPadConfig>>(it, object : com.google.gson.reflect.TypeToken<List<SoundPadConfig>>() {}.type)
-                    }.getOrNull()
-                } ?: defaults.soundboardPads,
-                vitalsAsBars     = prefs[Keys.VITALS_AS_BARS] ?: defaults.vitalsAsBars,
+                showVitals       = prefs[Keys.SHOW_VITALS]         ?: defaults.showVitals,
+                showTripTracker  = prefs[Keys.SHOW_TRIP_TRACKER]   ?: defaults.showTripTracker,
+                compassOffset    = prefs[Keys.COMPASS_OFFSET]      ?: defaults.compassOffset,
+                vitalsAsBars     = prefs[Keys.VITALS_AS_BARS]      ?: defaults.vitalsAsBars,
                 speedometerDigitalOnly = prefs[Keys.SPEEDOMETER_DIGITAL_ONLY] ?: defaults.speedometerDigitalOnly,
-                gradientDirection = prefs[Keys.GRADIENT_DIRECTION]?.let { runCatching { GradientDirection.valueOf(it) }.getOrNull() } ?: defaults.gradientDirection,
-                useCustomBackgroundColor = prefs[Keys.USE_CUSTOM_BG_COLOR] ?: defaults.useCustomBackgroundColor
+                gradientDirection = prefs[Keys.GRADIENT_DIRECTION]?.let { runCatching { GradientDirection.valueOf(it) }.getOrNull() } ?: defaults.gradientDirection
             )
     }
 
@@ -152,13 +158,22 @@ class SettingsRepository(private val context: Context) {
 
     private fun writeSettings(prefs: MutablePreferences, s: AppSettings) {
             prefs[Keys.VEHICLE_NAME]       = s.vehicleName
-            prefs[Keys.ACCENT_COLOR]       = s.accentColor
-            prefs[Keys.BG_COLOR]           = s.backgroundColor
-            prefs[Keys.FONT_COLOR]         = s.fontColor
+            prefs[Keys.LIGHT_COLOR_WIDGET] = s.lightWidgetColor
+            prefs[Keys.LIGHT_COLOR_TILE]   = s.lightTileColor
+            prefs[Keys.LIGHT_COLOR_FONT]   = s.lightFontColor
+            prefs[Keys.LIGHT_COLOR_BG1]    = s.lightBGColor1
+            prefs[Keys.LIGHT_COLOR_BG2]    = s.lightBGColor2
+            prefs[Keys.DARK_COLOR_WIDGET]  = s.darkWidgetColor
+            prefs[Keys.DARK_COLOR_TILE]    = s.darkTileColor
+            prefs[Keys.DARK_COLOR_FONT]    = s.darkFontColor
+            prefs[Keys.DARK_COLOR_BG1]     = s.darkBGColor1
+            prefs[Keys.DARK_COLOR_BG2]     = s.darkBGColor2
             prefs[Keys.WALLPAPER_URI]      = s.wallpaperUri
             prefs[Keys.FONT_BOLD]          = s.fontBold
             prefs[Keys.TEXT_SCALE]         = s.textScale
             prefs[Keys.UI_SCALE]           = s.uiScale
+            prefs[Keys.UI_TILES_WIDE]      = s.uiTilesWidth
+            prefs[Keys.UI_TILES_HIGH]      = s.uiTilesHeight
             prefs[Keys.CLOCK_STYLE]        = s.clockStyle.name
             prefs[Keys.UNIT_SYSTEM]        = s.unitSystem.name
             prefs[Keys.APP_FONT]           = s.appFont.name
@@ -173,7 +188,6 @@ class SettingsRepository(private val context: Context) {
             prefs[Keys.CAR_PLAY_PACKAGE]      = s.carPlayPackage
             prefs[Keys.ANDROID_AUTO_PACKAGE]  = s.androidAutoPackage
             prefs[Keys.USE_GRADIENT]       = s.useGradient
-            prefs[Keys.GRADIENT_END_COLOR] = s.gradientEndColor
             prefs[Keys.WALLPAPER_DIM]      = s.wallpaperDim
             prefs[Keys.SIDEBAR_POSITION]           = s.sidebarPosition.name
             prefs[Keys.BOTTOM_BAR_SHORTCUTS_RIGHT] = s.bottomBarShortcutsRight
@@ -185,12 +199,9 @@ class SettingsRepository(private val context: Context) {
             prefs[Keys.SHOW_VITALS]        = s.showVitals
             prefs[Keys.SHOW_TRIP_TRACKER]  = s.showTripTracker
             prefs[Keys.COMPASS_OFFSET]     = s.compassOffset
-            prefs[Keys.SHOW_SOUNDBOARD]    = s.showSoundboard
-            prefs[Keys.SOUNDBOARD_PADS_JSON] = gson.toJson(s.soundboardPads)
             prefs[Keys.VITALS_AS_BARS]     = s.vitalsAsBars
             prefs[Keys.SPEEDOMETER_DIGITAL_ONLY] = s.speedometerDigitalOnly
             prefs[Keys.GRADIENT_DIRECTION] = s.gradientDirection.name
-            prefs[Keys.USE_CUSTOM_BG_COLOR] = s.useCustomBackgroundColor
     }
 
     suspend fun resetToDefaults() {

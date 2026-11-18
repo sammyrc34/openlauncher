@@ -15,13 +15,12 @@ import com.openlauncher.app.model.WeatherState
 @Composable
 fun WeatherWidget(
     state: WeatherState?,
-    accent: Color,
     metric: Boolean,
     isDayMode: Boolean = false,
     modifier: Modifier = Modifier
 ) {
-    val contentColor = if (isDayMode) Color(0xFF111111) else MaterialTheme.colorScheme.onBackground
-    val subColor     = if (isDayMode) Color(0xFF888888) else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
+    val contentColor = MaterialTheme.colorScheme.primary
+    val subColor     = MaterialTheme.colorScheme.onPrimary
 
     Box(modifier = modifier) {
         if (state != null) {

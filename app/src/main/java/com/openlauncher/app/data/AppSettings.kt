@@ -1,7 +1,9 @@
 package com.openlauncher.app.data
 
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import com.openlauncher.app.ui.theme.colorAmber
+import com.openlauncher.app.ui.theme.colorBlack
+import com.openlauncher.app.ui.theme.colorWhite
 
 enum class ClockStyle { DIGITAL, ANALOG }
 enum class UnitSystem { METRIC, IMPERIAL }
@@ -26,20 +28,6 @@ enum class DefaultShortcutIcon {
     GLOBE
 }
 
-data class SoundPadConfig(
-    val label: String,
-    val audioUri: String = "",
-    val synthType: String = "BEEP"
-)
-
-fun defaultSoundboardPads() = listOf(
-    SoundPadConfig("mario_jump",   synthType = "mario_jump"),
-    SoundPadConfig("mario_coin",   synthType = "mario_coin"),
-    SoundPadConfig("boom",         synthType = "boom"),
-    SoundPadConfig("loud_fart",    synthType = "loud_fart"),
-    SoundPadConfig("+",            synthType = ""),
-    SoundPadConfig("+",            synthType = "")
-)
 
 data class ShortcutConfig(
     val packageName: String = "",
@@ -64,13 +52,22 @@ data class WidgetConfig(
 
 data class AppSettings(
     val vehicleName: String = "MY CAR",
-    val accentColor: Int = Color.White.toArgb(),
-    val backgroundColor: Int = Color.Black.toArgb(),
-    val fontColor: Int = Color.White.toArgb(),
+    val lightWidgetColor: Int = colorAmber.toArgb(),
+    val lightTileColor: Int = colorBlack.copy(alpha = 0.2f).toArgb(),
+    val lightFontColor: Int = colorBlack.toArgb(),
+    val lightBGColor1: Int = colorWhite.toArgb(),
+    val lightBGColor2: Int = colorWhite.toArgb(),
+    val darkWidgetColor: Int = colorAmber.toArgb(),
+    val darkTileColor: Int = colorWhite.copy(alpha = 0.2f).toArgb(),
+    val darkFontColor: Int = colorWhite.toArgb(),
+    val darkBGColor1: Int = colorBlack.toArgb(),
+    val darkBGColor2: Int = colorBlack.toArgb(),
     val wallpaperUri: String = "",
     val fontBold: Boolean = false,
     val textScale: Float = 1.2f,
     val uiScale: Float = 1.0f,
+    val uiTilesWidth: Int = 3,
+    val uiTilesHeight: Int = 2,
     val clockStyle: ClockStyle = ClockStyle.DIGITAL,
     val unitSystem: UnitSystem = UnitSystem.METRIC,
     val appFont: AppFont = AppFont.JETBRAINS_MONO,
@@ -83,7 +80,6 @@ data class AppSettings(
     val carPlayPackage: String = "",
     val androidAutoPackage: String = "",
     val useGradient: Boolean = false,
-    val gradientEndColor: Int = Color.Black.toArgb(),
     val wallpaperDim: Float = 0.55f,
     val sidebarPosition: SidebarPosition = SidebarPosition.LEFT,
     val bottomBarShortcutsRight: Boolean = false,
@@ -98,12 +94,9 @@ data class AppSettings(
     val showVitals: Boolean = false,
     val showTripTracker: Boolean = false,
     val compassOffset: Float = 0f,
-    val showSoundboard: Boolean = false,
-    val soundboardPads: List<SoundPadConfig> = defaultSoundboardPads(),
     val vitalsAsBars: Boolean = false,
     val speedometerDigitalOnly: Boolean = false,
     val gradientDirection: GradientDirection = GradientDirection.DIAGONAL,
-    val useCustomBackgroundColor: Boolean = false
 )
 
 fun defaultShortcuts() = listOf(
@@ -129,7 +122,6 @@ fun AppSettings.activeWidgetIds(): Set<String> = buildSet {
     if (showSpeedometer) add("SPEEDOMETER")
     if (showVitals) add("VITALS")
     if (showTripTracker) add("TRIP_TRACKER")
-    if (showSoundboard) add("SOUNDBOARD")
 }
 
 /**
@@ -141,12 +133,14 @@ fun computeWidgetMove(
     layout: List<WidgetConfig>,
     movingId: String,
     targetX: Int,
-    targetY: Int
+    targetY: Int,
+    sizeX: Int,
+    sizeY: Int
 ): List<WidgetConfig> {
     val moving = layout.find { it.id == movingId } ?: return layout
     val placed = moving.copy(
-        gridX = targetX.coerceIn(0, GRID_COLS - moving.spanX),
-        gridY = targetY.coerceIn(0, GRID_ROWS - moving.spanY)
+        gridX = targetX.coerceIn(0, sizeX - moving.spanX),
+        gridY = targetY.coerceIn(0, sizeY - moving.spanY)
     )
 
     val others  = layout.filter { it.id != movingId }

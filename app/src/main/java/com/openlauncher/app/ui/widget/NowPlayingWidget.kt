@@ -138,7 +138,7 @@ fun NowPlayingWidget(
 
         // 2. FLOATING MULTI-SOURCE SELECTOR (Top-Right, always overlayed)
         var menuExpanded by remember { mutableStateOf(false) }
-        val selectorIconColor = if (isDayMode) Color.Black.copy(alpha = 0.4f) else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)
+        val selectorIconColor = MaterialTheme.colorScheme.primary
         
         Box(
             modifier = Modifier
@@ -156,8 +156,8 @@ fun NowPlayingWidget(
                     modifier = Modifier.size(16.dp)
                 )
             }
-            val dropdownBg   = if (isDayMode) Color(0xFFF0F0F0) else MaterialTheme.colorScheme.background
-            val dropdownText = if (isDayMode) Color(0xFF111111) else MaterialTheme.colorScheme.onBackground
+            val dropdownBg   = MaterialTheme.colorScheme.surface
+            val dropdownText = MaterialTheme.colorScheme.primary
             DropdownMenu(
                 expanded = menuExpanded,
                 onDismissRequest = { menuExpanded = false },
@@ -207,9 +207,9 @@ private fun RadioDeck(
     onAssignRadio: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val contentColor = if (isDayMode) Color(0xFF111111) else MaterialTheme.colorScheme.onBackground
-    val dimColor     = if (isDayMode) Color(0xFF444444) else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
-    val borderColor  = if (isDayMode) Color(0xFF777777) else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.15f)
+    val contentColor = MaterialTheme.colorScheme.primary
+    val dimColor     = MaterialTheme.colorScheme.onPrimary
+    val borderColor  = MaterialTheme.colorScheme.primary
 
     if (hardwareRadio == null) {
         // No real tuner detected — be honest about it instead of simulating one
@@ -268,6 +268,7 @@ private fun RadioDeck(
     val displayFreq = freqClean.ifEmpty { hardwareRadio.freq }
     val displayUnit = if (hardwareRadio.isAm) "kHz" else "MHz"
 
+    // FIXME: move to theme
     val chipInactiveBg = if (isDayMode) Color(0xFFE0E0E0) else Color(0xFF1A1A1A)
     val chipActiveBg   = if (isDayMode) Color(0xFF222222) else Color(0xFFDDDDDD)
     val chipActiveText = if (isDayMode) Color.White else Color(0xFF111111)
@@ -531,10 +532,8 @@ private fun StandardMinimalPlayer(
     val context = LocalContext.current
     
     // UI Theme colors
-    val idleIconColor = if (isDayMode) Color(0xFF555555) else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.30f)
-    val idleTextColor = if (isDayMode) Color(0xFF555555) else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.30f)
-    val contentTextColor = if (isDayMode) Color(0xFF111111) else MaterialTheme.colorScheme.onBackground
-    val subTextColor = if (isDayMode) Color(0xFF666666) else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.30f)
+    val idleIconColor = MaterialTheme.colorScheme.primary
+    val idleTextColor = MaterialTheme.colorScheme.primary
 
     Box(modifier = modifier) {
         if (!hasContent) {
@@ -616,8 +615,9 @@ private fun StandardMinimalPlayer(
             val hasAlbumArt = nonNullState.albumArt != null
             val useDarkTheme = hasAlbumArt || !isDayMode
 
-            val currentTextColor = if (hasAlbumArt) Color.White else if (isDayMode) Color(0xFF111111) else MaterialTheme.colorScheme.onBackground
-            val currentSubTextColor = if (hasAlbumArt) Color.White.copy(alpha = 0.6f) else if (isDayMode) Color(0xFF666666) else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+            // FIXME: theme-ize
+            val currentTextColor = if (hasAlbumArt) Color.White else MaterialTheme.colorScheme.primary
+            val currentSubTextColor = if (hasAlbumArt) Color.White.copy(alpha = 0.6f) else MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
             val currentProgressColor = if (useDarkTheme) accent else if (isDayMode) Color(0xFF111111) else accent
             val currentProgressTrack = currentTextColor.copy(alpha = 0.15f)
             val currentIconColor = currentTextColor.copy(alpha = 0.75f)

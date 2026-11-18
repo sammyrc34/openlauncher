@@ -1,6 +1,8 @@
 package com.openlauncher.app.ui.screen
 
+import android.annotation.SuppressLint
 import android.content.res.Configuration
+import android.util.Log
 import androidx.compose.animation.*
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -36,8 +38,6 @@ import kotlin.math.roundToInt
 import com.openlauncher.app.data.AppSettings
 import com.openlauncher.app.data.ClockStyle
 import com.openlauncher.app.data.computeWidgetMove
-import com.openlauncher.app.data.GRID_COLS
-import com.openlauncher.app.data.GRID_ROWS
 import com.openlauncher.app.data.WidgetConfig
 import com.openlauncher.app.model.NowPlayingState
 import com.openlauncher.app.model.WeatherState
@@ -64,10 +64,9 @@ private val ALL_WIDGET_TYPES = listOf(
     WidgetTypeInfo("SPEEDOMETER", "SPEED",       Icons.Default.Speed,         "GPS speed"),
     WidgetTypeInfo("VITALS",      "VITALS",      Icons.Default.Dns,           "Head Unit Health / Vitals"),
     WidgetTypeInfo("TRIP_TRACKER", "TRIP TRACKER", Icons.Default.Map,          "Trip logs & stats"),
-    WidgetTypeInfo("SOUNDBOARD",  "SOUNDBOARD",  Icons.Default.Piano,         "Custom sound pads")
 )
 
-private fun canAddWidget(settings: com.openlauncher.app.data.AppSettings): Boolean {
+private fun canAddWidget(settings: AppSettings): Boolean {
     val visibleIds = buildSet {
         if (settings.showClock) add("CLOCK")
         if (settings.showWeather) add("WEATHER")
@@ -77,7 +76,6 @@ private fun canAddWidget(settings: com.openlauncher.app.data.AppSettings): Boole
         if (settings.showSpeedometer) add("SPEEDOMETER")
         if (settings.showVitals) add("VITALS")
         if (settings.showTripTracker) add("TRIP_TRACKER")
-        if (settings.showSoundboard) add("SOUNDBOARD")
     }
     val activeWidgets = settings.widgetLayout.filter { it.enabled && it.id in visibleIds }
     val occupied = buildSet<Pair<Int, Int>> {
@@ -85,14 +83,15 @@ private fun canAddWidget(settings: com.openlauncher.app.data.AppSettings): Boole
             for (dx in 0 until w.spanX) for (dy in 0 until w.spanY) add(w.gridX + dx to w.gridY + dy)
         }
     }
-    val hasFreeCell = (0 until com.openlauncher.app.data.GRID_ROWS).any { r ->
-        (0 until com.openlauncher.app.data.GRID_COLS).any { c -> (c to r) !in occupied }
+    val hasFreeCell = (0 until settings.uiTilesWidth).any { r ->
+        (0 until settings.uiTilesHeight).any { c -> (c to r) !in occupied }
     }
     // Also true if any active widget spans >1 cell and can be shrunk to make room
     val hasShrinkable = activeWidgets.any { it.spanX * it.spanY > 1 }
     return hasFreeCell || hasShrinkable
 }
 
+@SuppressLint("UnusedBoxWithConstraintsScope")
 @Composable
 fun HomeScreen(
     settings: AppSettings,
@@ -123,7 +122,6 @@ fun HomeScreen(
     onSetClockStyle: (ClockStyle) -> Unit,
     onSetVitalsAsBars: (Boolean) -> Unit = {},
     onSetSpeedometerDigitalOnly: (Boolean) -> Unit = {},
-    onUpdateSoundPad: (index: Int, pad: com.openlauncher.app.data.SoundPadConfig) -> Unit = { _, _ -> },
     hardwareRadio: com.openlauncher.app.viewmodel.LauncherViewModel.HardwareRadioState? = null,
     onLaunchHardwareRadio: () -> Unit = {},
     onStopHardwareRadio: () -> Unit = {},
@@ -135,19 +133,11 @@ fun HomeScreen(
     onAssignRadio: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    val accent       = Color(settings.accentColor)
+    val accent       = MaterialTheme.colorScheme.secondary
     val gap          = 6.dp
-    val hasWallpaper = settings.wallpaperUri.isNotEmpty()
-    val widgetBg     = when {
-        isDayMode    -> Color(0xFFFFFFFF)
-        hasWallpaper -> Color(0xCC000000)
-        else         -> Color.Black.copy(alpha = 0.35f)
-    }
-    val widgetBorder = when {
-        isDayMode    -> Color(0xFFCCCCCC)
-        hasWallpaper -> Color(0x22FFFFFF)
-        else         -> MaterialTheme.colorScheme.onBackground.copy(alpha = 0.08f)
-    }
+    val widgetBg     = MaterialTheme.colorScheme.surface
+    val widgetBorder = MaterialTheme.colorScheme.onSurface
+    // FIXME: theme-ize
     val headerTextColor   = if (isDayMode) Color(0xFF111111) else accent
     val statusIconColor   = if (isDayMode) Color(0xFF444444) else Color(0xFF666666)
     val controlIconColor  = if (isDayMode) Color(0xFF666666) else Color(0xFF444444)
@@ -223,8 +213,8 @@ fun HomeScreen(
                 .fillMaxSize()
                 .padding(gap)
         ) {
-            val cellW = (maxWidth  - gap * (GRID_COLS - 1)) / GRID_COLS
-            val cellH = (maxHeight - gap * (GRID_ROWS - 1)) / GRID_ROWS
+            val cellW = (maxWidth - gap * (settings.uiTilesWidth-1)) / settings.uiTilesWidth
+            val cellH = (maxHeight - gap * (settings.uiTilesHeight-1)) / settings.uiTilesHeight
             val density = LocalDensity.current
             val cellStepXPx = with(density) { (cellW + gap).toPx() }
             val cellStepYPx = with(density) { (cellH + gap).toPx() }
@@ -242,11 +232,10 @@ fun HomeScreen(
                 if (settings.showSpeedometer) add("SPEEDOMETER")
                 if (settings.showVitals) add("VITALS")
                 if (settings.showTripTracker) add("TRIP_TRACKER")
-                if (settings.showSoundboard) add("SOUNDBOARD")
             }
 
-            // Keep only visible widgets exactly as configured in settings, allowing explicit resizing to dictate layout
-            val visible = settings.widgetLayout.filter { it.enabled && it.id in visibleIds }
+            // Keep only visible widgets exactly as configured in settings, so invisible widgets will not be included
+            val visible = settings.widgetLayout.filter { it.enabled && it.id in visibleIds && it.gridX < settings.uiTilesWidth && it.gridY < settings.uiTilesHeight }
             val rendered = visible
 
             // ── Drag state ───────────────────────────────────────────────────
@@ -256,15 +245,15 @@ fun HomeScreen(
             // Compute snap target for the widget being dragged (uses original spanX)
             val draggingOriginal = if (draggingId != null) visible.find { it.id == draggingId } else null
             val targetGridX = draggingOriginal?.let {
-                (it.gridX + (dragOffsetPx.x / cellStepXPx).roundToInt()).coerceIn(0, GRID_COLS - it.spanX)
+                (it.gridX + (dragOffsetPx.x / cellStepXPx).roundToInt()).coerceIn(0, settings.uiTilesWidth - it.spanX)
             }
             val targetGridY = draggingOriginal?.let {
-                (it.gridY + (dragOffsetPx.y / cellStepYPx).roundToInt()).coerceIn(0, GRID_ROWS - it.spanY)
+                (it.gridY + (dragOffsetPx.y / cellStepYPx).roundToInt()).coerceIn(0, settings.uiTilesHeight - it.spanY)
             }
 
             // Compute proposed layout (push preview) while dragging
             val proposedLayout = if (draggingOriginal != null && targetGridX != null && targetGridY != null)
-                computeWidgetMove(visible, draggingOriginal.id, targetGridX, targetGridY)
+                computeWidgetMove(visible, draggingOriginal.id, targetGridX, targetGridY, settings.uiTilesWidth, settings.uiTilesHeight)
             else null
 
             // Drop ghost — rendered before widgets so it appears beneath them
@@ -303,6 +292,7 @@ fun HomeScreen(
                     }
             }
 
+            // Place widgets in the grid
             rendered.forEach { w ->
                 val xOff   = (cellW + gap) * w.gridX
                 val yOff   = (cellH + gap) * w.gridY
@@ -317,7 +307,6 @@ fun HomeScreen(
                     "ALTIMETER"   -> "ALTIMETER"
                     "SPEEDOMETER" -> "SPEED"
                     "TRIP_TRACKER" -> "TRIP"
-                    "SOUNDBOARD"  -> "SOUND"
                     else          -> w.id
                 }
 
@@ -330,6 +319,7 @@ fun HomeScreen(
                 val dragDpX    = if (isDragging) with(density) { dragOffsetPx.x.toDp() } else 0.dp
                 val dragDpY    = if (isDragging) with(density) { dragOffsetPx.y.toDp() } else 0.dp
 
+                Log.d("DEBUG", "Window " + w.id + " at spot " + w.gridX + " x " + w.gridY + " size=" + width + " x " + height + " at span=" + w.spanX + " x " + w.spanY + " with offset " + xOff + " x " + yOff )
                 @OptIn(ExperimentalFoundationApi::class)
                 Box(
                     modifier = Modifier
@@ -375,9 +365,10 @@ fun HomeScreen(
                                     onDragEnd = {
                                         if (hasSignificantDrag) {
                                             val newX = (w.gridX + (dragOffsetPx.x / cellStepXPx).roundToInt())
-                                                .coerceIn(0, GRID_COLS - origSpanX)
+                                                .coerceIn(0, settings.uiTilesWidth - origSpanX)
                                             val newY = (w.gridY + (dragOffsetPx.y / cellStepYPx).roundToInt())
-                                                .coerceIn(0, GRID_ROWS - w.spanY)
+                                                .coerceIn(0, settings.uiTilesHeight - w.spanY)
+                                            Log.d( "DEBUG", "New spot $newX x $newY")
                                             onMoveWidget(w.id, newX, newY)
                                         } else {
                                             contextMenuId = w.id
@@ -396,13 +387,11 @@ fun HomeScreen(
                     when (w.id) {
                         "CLOCK" -> ClockWidget(
                             style      = settings.clockStyle,
-                            accent     = accent,
                             isDayMode  = isDayMode,
                             modifier   = Modifier.fillMaxSize()
                         )
                         "WEATHER" -> WeatherWidget(
                             state      = weather,
-                            accent     = accent,
                             metric     = settings.unitSystem.name == "METRIC",
                             isDayMode  = isDayMode,
                             modifier   = Modifier.fillMaxSize()
@@ -442,7 +431,6 @@ fun HomeScreen(
                             location  = location,
                             isMetric  = settings.unitSystem == com.openlauncher.app.data.UnitSystem.METRIC,
                             accent    = accent,
-                            isDayMode = isDayMode,
                             modifier  = Modifier.fillMaxSize()
                         )
                         "SPEEDOMETER" -> SpeedometerWidget(
@@ -454,7 +442,6 @@ fun HomeScreen(
                             modifier  = Modifier.fillMaxSize()
                         )
                         "VITALS" -> VitalsWidget(
-                            accent    = accent,
                             isDayMode = isDayMode,
                             asBars    = settings.vitalsAsBars,
                             modifier  = Modifier.fillMaxSize()
@@ -466,22 +453,14 @@ fun HomeScreen(
                             isDayMode = isDayMode,
                             modifier  = Modifier.fillMaxSize()
                         )
-                        "SOUNDBOARD" -> SoundboardWidget(
-                            pads      = settings.soundboardPads,
-                            accent    = accent,
-                            isDayMode = isDayMode,
-                            isEditing = editMode,
-                            onUpdatePad = onUpdateSoundPad,
-                            modifier  = Modifier.fillMaxSize()
-                        )
+
                     }
 
                     // Label — hide when album art fills the widget background
                     val labelColor = when {
                         isGhost -> Color.Transparent
                         w.id == "NOW_PLAYING" && nowPlaying?.albumArt != null && nowPlaying.title.isNotEmpty() -> Color.Transparent
-                        isDayMode -> Color(0xFF999999)
-                        else      -> Color(0xFF3A3A3A)
+                        else -> MaterialTheme.colorScheme.onBackground
                     }
                     Text(
                         text          = label,
@@ -530,10 +509,11 @@ fun HomeScreen(
         if (config != null) {
             WidgetResizeDialog(
                 config    = config,
-                accent    = accent,
+                settings  = settings,
                 isDayMode = isDayMode,
                 onDismiss = { resizingId = null },
                 onConfirm = { sx, sy ->
+                    Log.d("DEBUG", "Update widget size " + config.id + " to " + sx + " x " + sy )
                     onUpdateWidget(id, sx, sy)
                     resizingId = null
                 }
@@ -699,7 +679,7 @@ private fun ContextRow(
 @Composable
 private fun WidgetResizeDialog(
     config: WidgetConfig,
-    accent: Color,
+    settings: AppSettings,
     isDayMode: Boolean,
     onDismiss: () -> Unit,
     onConfirm: (spanX: Int, spanY: Int) -> Unit
@@ -707,9 +687,11 @@ private fun WidgetResizeDialog(
     var spanX by remember { mutableStateOf(config.spanX) }
     var spanY by remember { mutableStateOf(config.spanY) }
 
-    val maxSpanX = GRID_COLS - config.gridX
-    val maxSpanY = GRID_ROWS - config.gridY
+    val maxSpanX = settings.uiTilesWidth - config.gridX
+    val maxSpanY = settings.uiTilesHeight - config.gridY
 
+    // FIXME: theme-ize
+    val accent       = if (isDayMode) Color.LightGray else MaterialTheme.colorScheme.primary
     val dialogBg     = if (isDayMode) Color(0xFFFFFFFF) else MaterialTheme.colorScheme.background
     val dialogText   = if (isDayMode) Color(0xFF111111) else MaterialTheme.colorScheme.onBackground
     val cancelColor  = if (isDayMode) Color(0xFF6C757D) else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
@@ -719,7 +701,7 @@ private fun WidgetResizeDialog(
             Text(
                 text          = config.id.replace('_', ' '),
                 color         = dialogText,
-                fontSize      = 11.sp,
+                fontSize      = 16.sp,
                 letterSpacing = 2.sp
             )
         },
@@ -731,12 +713,12 @@ private fun WidgetResizeDialog(
         },
         confirmButton = {
             TextButton(onClick = { onConfirm(spanX, spanY) }) {
-                Text("APPLY", color = accent, fontSize = 11.sp, letterSpacing = 1.sp)
+                Text("APPLY", color = accent, fontSize = 12.sp, letterSpacing = 1.sp)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("CANCEL", color = cancelColor, fontSize = 11.sp, letterSpacing = 1.sp)
+                Text("CANCEL", color = cancelColor, fontSize = 12.sp, letterSpacing = 1.sp)
             }
         },
         containerColor    = dialogBg,
@@ -755,8 +737,8 @@ private fun SpanRow(
     isDayMode: Boolean,
     onChange: (Int) -> Unit
 ) {
+    // FIXME: theme-ize
     val textColor   = if (isDayMode) Color(0xFF111111) else MaterialTheme.colorScheme.onBackground
-    val dimColor    = if (isDayMode) Color(0xFF495057) else Color(0xFF666666)
     val disabledC   = if (isDayMode) Color(0xFFCED4DA) else Color(0xFF333333)
     val inactiveBg  = if (isDayMode) Color(0xFFE9ECEF) else Color(0xFF2A2A2A)
     Row(
@@ -765,8 +747,8 @@ private fun SpanRow(
     ) {
         Text(
             text          = label,
-            color         = dimColor,
-            fontSize      = 10.sp,
+            color         = textColor,
+            fontSize      = 12.sp,
             letterSpacing = 1.sp,
             modifier      = Modifier.width(52.dp)
         )
@@ -793,7 +775,7 @@ private fun SpanRow(
         ) {
             Icon(
                 Icons.Default.Add, null,
-                tint     = if (value < max) accent else disabledC,
+                tint     = if (value < max) textColor else disabledC,
                 modifier = Modifier.size(16.dp)
             )
         }
@@ -838,7 +820,6 @@ private fun WidgetLibraryDialog(
         if (settings.showSpeedometer) add("SPEEDOMETER")
         if (settings.showVitals) add("VITALS")
         if (settings.showTripTracker) add("TRIP_TRACKER")
-        if (settings.showSoundboard) add("SOUNDBOARD")
     }
     val canAdd = canAddWidget(settings)
 
@@ -858,7 +839,7 @@ private fun WidgetLibraryDialog(
                 Text(
                     text          = "WIDGET LIBRARY",
                     color         = titleColor,
-                    fontSize      = 9.sp,
+                    fontSize      = 12.sp,
                     letterSpacing = 2.sp
                 )
                 Spacer(Modifier.weight(1f))
@@ -886,10 +867,11 @@ private fun WidgetLibraryDialog(
                 }
             }
 
+            // Fixme, check free cells taking spans into account
             if (!canAdd) {
                 Spacer(Modifier.height(10.dp))
                 Text(
-                    text          = "ALL ${GRID_COLS * GRID_ROWS} CELLS OCCUPIED — REMOVE A WIDGET TO ADD MORE",
+                    text          = "ALL ${settings.uiTilesWidth * settings.uiTilesHeight} CELLS OCCUPIED — REMOVE A WIDGET TO ADD MORE",
                     color         = if (isDayMode) Color(0xFFE03131) else Color(0xFF3A3A3A),
                     fontSize      = 8.sp,
                     letterSpacing = 1.sp,

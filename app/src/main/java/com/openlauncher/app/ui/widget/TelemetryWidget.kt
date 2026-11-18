@@ -1,5 +1,6 @@
 package com.openlauncher.app.ui.widget
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.MaterialTheme
@@ -18,6 +19,7 @@ import androidx.compose.ui.unit.sp
 import com.openlauncher.app.util.LocationData
 import kotlin.math.abs
 
+@SuppressLint("UnusedBoxWithConstraintsScope")
 @Composable
 fun TelemetryWidget(
     location: LocationData?,
@@ -26,12 +28,12 @@ fun TelemetryWidget(
     isDayMode: Boolean = false,
     modifier: Modifier = Modifier
 ) {
-    val contentColor = if (isDayMode) Color(0xFF111111) else MaterialTheme.colorScheme.onBackground
-    val subColor     = if (isDayMode) Color(0xFF888888) else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
-    val ringColor    = if (isDayMode) Color(0xFFCCCCCC) else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.15f)
-    val cardinalMain = if (isDayMode) Color(0xFF555555) else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
-    val cardinalSub  = if (isDayMode) Color(0xFF888888) else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)
-    val arrowColor   = if (isDayMode) Color(0xFF222222) else MaterialTheme.colorScheme.onBackground
+    val contentColor = MaterialTheme.colorScheme.primary
+    val subColor     = MaterialTheme.colorScheme.onPrimary
+    val ringColor    = MaterialTheme.colorScheme.primary
+    val cardinalMain = MaterialTheme.colorScheme.secondary
+    val cardinalSub  = MaterialTheme.colorScheme.onSecondary
+    val arrowColor   = MaterialTheme.colorScheme.onSecondary
     Column(
         modifier = modifier.padding(horizontal = 14.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.SpaceBetween
@@ -87,7 +89,7 @@ fun TelemetryWidget(
                     )
                     Text(
                         text     = "S",
-                        color    = cardinalMain,
+                        color    = cardinalSub,
                         fontSize = 11.sp,
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
@@ -119,7 +121,7 @@ fun TelemetryWidget(
                 val r  = radius.toPx()
 
                 // Small fixed arrow pointing straight up
-                val arrowH = r * 0.20f
+                val arrowH = r * 0.40f
                 val arrowW = arrowH * 0.48f
                 drawPath(
                     path  = Path().apply {

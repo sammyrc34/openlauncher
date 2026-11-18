@@ -30,11 +30,10 @@ fun AltimeterWidget(
     location: LocationData?,
     isMetric: Boolean,
     accent: Color,
-    isDayMode: Boolean = false,
     modifier: Modifier = Modifier
 ) {
-    val iconTint = if (isDayMode) Color(0xFF333333) else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.85f)
-    val labelColor = if (isDayMode) Color(0xFF888888) else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.30f)
+    val iconTint = MaterialTheme.colorScheme.primary
+    val labelColor = MaterialTheme.colorScheme.onPrimary
     val context = LocalContext.current
 
     // Accelerometer sensor state
@@ -126,7 +125,7 @@ fun AltimeterWidget(
                     val unit = if (isMetric) "m" else "ft"
                     "%,.0f %s".format(altVal, unit)
                 } else "—",
-                color = if (isDayMode) Color(0xFF111111) else MaterialTheme.colorScheme.onBackground,
+                color = MaterialTheme.colorScheme.primary,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Bold
             )

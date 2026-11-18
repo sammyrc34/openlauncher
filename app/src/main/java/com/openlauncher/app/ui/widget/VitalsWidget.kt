@@ -1,10 +1,12 @@
 package com.openlauncher.app.ui.widget
 
+import android.annotation.SuppressLint
 import android.app.ActivityManager
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.BatteryManager
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -25,18 +27,22 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.openlauncher.app.ui.theme.colorAmber
+import com.openlauncher.app.ui.theme.colorRed
 import kotlinx.coroutines.delay
 import java.io.File
 
 @Composable
 fun VitalsWidget(
-    accent: Color,
-    isDayMode: Boolean = false,
-    asBars: Boolean = false,
+    isDayMode: Boolean,
+    asBars: Boolean,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val labelColor = if (isDayMode) Color(0xFF666666) else androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = 0.35f)
+
+    val criticalColor = colorRed
+    val warningColor = colorAmber
+    val normalColor = MaterialTheme.colorScheme.secondary
 
     var cpuUsage by remember { mutableFloatStateOf(20f) }
     var ramUsedPercent by remember { mutableFloatStateOf(45f) }
@@ -164,9 +170,9 @@ fun VitalsWidget(
     }
 
     // Warning colors for diagnostics
-    val cpuColor = if (cpuUsage > 85f) Color(0xFFDD5555) else if (cpuUsage > 65f) Color(0xFFE6A23C) else accent
-    val ramColor = if (ramUsedPercent > 90f) Color(0xFFDD5555) else if (ramUsedPercent > 75f) Color(0xFFE6A23C) else accent
-    val tempColor = if (temperature > 75f) Color(0xFFDD5555) else if (temperature > 60f) Color(0xFFE6A23C) else accent
+    val cpuColor = if (cpuUsage > 85f) criticalColor else if (cpuUsage > 65f) warningColor else normalColor
+    val ramColor = if (ramUsedPercent > 90f) criticalColor else if (ramUsedPercent > 75f) warningColor else normalColor
+    val tempColor = if (temperature > 75f) criticalColor else if (temperature > 60f) warningColor else normalColor
 
     Column(
         modifier = modifier.padding(start = 14.dp, end = 14.dp, top = 22.dp, bottom = 8.dp),
@@ -248,9 +254,9 @@ private fun BarGauge(
     isDayMode: Boolean,
     modifier: Modifier = Modifier
 ) {
-    val trackColor = if (isDayMode) Color(0xFFD6D6D6) else androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = 0.08f)
-    val contentColor = if (isDayMode) Color(0xFF111111) else androidx.compose.material3.MaterialTheme.colorScheme.onBackground
-    val labelColor = if (isDayMode) Color(0xFF666666) else androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = 0.35f)
+    val trackColor = MaterialTheme.colorScheme.onSurface
+    val contentColor = MaterialTheme.colorScheme.primary
+    val labelColor = MaterialTheme.colorScheme.onPrimary
 
     Column(
         modifier = modifier,
@@ -295,6 +301,7 @@ private fun BarGauge(
     }
 }
 
+@SuppressLint("UnusedBoxWithConstraintsScope")
 @Composable
 private fun DialGauge(
     value: Float,
@@ -304,9 +311,9 @@ private fun DialGauge(
     isDayMode: Boolean,
     modifier: Modifier = Modifier
 ) {
-    val trackColor = if (isDayMode) Color(0xFFD6D6D6) else androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = 0.08f)
-    val contentColor = if (isDayMode) Color(0xFF111111) else androidx.compose.material3.MaterialTheme.colorScheme.onBackground
-    val labelColor = if (isDayMode) Color(0xFF666666) else androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = 0.35f)
+    val trackColor = MaterialTheme.colorScheme.onSurface
+    val contentColor = MaterialTheme.colorScheme.primary
+    val labelColor = MaterialTheme.colorScheme.onPrimary
 
     BoxWithConstraints(
         modifier = modifier,

@@ -77,17 +77,13 @@ class MainActivity : ComponentActivity() {
             val isDayMode = if (settings.dayNightMode == DayNightMode.SYSTEM) !systemIsDark else isDayModeVM
             val pickerSlot      by vm.shortcutPickerSlot.collectAsStateWithLifecycle()
             val appPickerTarget by vm.appPickerTarget.collectAsStateWithLifecycle()
-
-            val accent         = Color(settings.accentColor)
-            val bg             = if (settings.useCustomBackgroundColor) {
-                Color(settings.backgroundColor)
-            } else {
-                if (isDayMode) Color(0xFFEEEEEE) else Color.Black
-            }
-            val textColor      = if (isDayMode) Color(0xFF111111) else Color(settings.fontColor)
-            val bgGradientEnd  = Color(settings.gradientEndColor)
-            val bgBrush        = if (settings.useCustomBackgroundColor && settings.useGradient) {
-                val colors = listOf(bg, bgGradientEnd)
+            val widgetColor    = if (isDayMode) Color(settings.lightWidgetColor) else Color(settings.darkWidgetColor)
+            val tilesColor     = if (isDayMode) Color(settings.lightTileColor) else Color(settings.darkTileColor)
+            val bgColor1       = if (isDayMode) Color(settings.lightBGColor1) else Color(settings.darkBGColor1)
+            val bgColor2       = if (isDayMode) Color(settings.lightBGColor2) else Color(settings.darkBGColor2)
+            val textColor      = if (isDayMode) Color(settings.lightFontColor) else Color(settings.darkFontColor)
+            val bgBrush        = if (settings.useGradient) {
+                val colors = listOf(bgColor1, bgColor2)
                 when (settings.gradientDirection) {
                     GradientDirection.TOP_TO_BOTTOM -> androidx.compose.ui.graphics.Brush.verticalGradient(colors)
                     GradientDirection.LEFT_TO_RIGHT -> androidx.compose.ui.graphics.Brush.horizontalGradient(colors)
@@ -106,18 +102,18 @@ class MainActivity : ComponentActivity() {
                 if (!settingsLoaded) {
                     Box(modifier = Modifier.fillMaxSize().background(Color.Black))
                 } else OpenLauncherTheme(
-                    accent     = accent,
-                    background = bg,
-                    textColor  = textColor,
-                    fontBold   = settings.fontBold,
-                    textScale  = settings.textScale,
-                    appFont    = settings.appFont,
-                    isDayMode  = isDayMode,
-                    useCustomBg = settings.useCustomBackgroundColor
+                    controls    = widgetColor,
+                    tiles       = tilesColor,
+                    background1 = bgColor1,
+                    textColor   = textColor,
+                    fontBold    = settings.fontBold,
+                    textScale   = settings.textScale,
+                    appFont     = settings.appFont,
+                    isDayMode   = isDayMode
                 ) {
                 if (!settings.onboardingCompleted) {
                     OnboardingScreen(
-                        accent = accent,
+                        accent = widgetColor,
                         onComplete = {
                             vm.updateSettings { copy(onboardingCompleted = true) }
                             // Start location updates immediately upon completion
@@ -126,7 +122,7 @@ class MainActivity : ComponentActivity() {
                     )
                 } else {
                     Box(modifier = Modifier.fillMaxSize().let { m ->
-                        if (bgBrush != null) m.background(bgBrush) else m.background(bg)
+                        if (bgBrush != null) m.background(bgBrush) else m.background(bgColor1)
                     }) {
                         // Optional wallpaper layer
                         if (settings.wallpaperUri.isNotEmpty()) {
@@ -220,7 +216,6 @@ class MainActivity : ComponentActivity() {
                                         onSetClockStyle     = { style -> vm.updateSettings { copy(clockStyle = style) } },
                                         onSetVitalsAsBars   = { asBars -> vm.updateSettings { copy(vitalsAsBars = asBars) } },
                                         onSetSpeedometerDigitalOnly = { digital -> vm.updateSettings { copy(speedometerDigitalOnly = digital) } },
-                                        onUpdateSoundPad    = { idx, pad -> vm.updateSoundboardPad(idx, pad) },
                                         hardwareRadio         = hardwareRadio,
                                         onLaunchHardwareRadio = { vm.launchHardwareRadioApp() },
                                         onStopHardwareRadio   = { vm.stopHardwareRadioApp() },
@@ -244,7 +239,7 @@ class MainActivity : ComponentActivity() {
                                             com.openlauncher.app.viewmodel.LauncherViewModel.AppPickerTarget.RADIO        -> "CHOOSE RADIO APP"
                                             else -> "CHOOSE CARPLAY APP"
                                         },
-                                        accent              = accent,
+                                        accent              = widgetColor,
                                         onAppClick          = { app -> vm.launchApp(app.packageName) },
                                         onPickerSelect      = { slot, app -> vm.assignShortcut(slot, app) },
                                         onCarPlaySelect     = { app -> vm.assignPickerApp(app) }
@@ -252,7 +247,7 @@ class MainActivity : ComponentActivity() {
 
                                     NavDestination.SETTINGS -> SettingsScreen(
                                         settings = settings,
-                                        accent   = accent,
+                                        accent   = widgetColor,
                                         onUpdate = { block -> vm.updateSettings(block) },
                                         onReset  = { vm.resetSettings() }
                                     )

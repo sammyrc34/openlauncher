@@ -11,13 +11,15 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
-import com.openlauncher.app.ui.theme.accentPresetLabels
-import com.openlauncher.app.ui.theme.accentPresets
+import com.openlauncher.app.ui.theme.colorPresetLabels
+import com.openlauncher.app.ui.theme.colorPresets
 
 @Composable
 fun ColorPickerDialog(
@@ -31,13 +33,15 @@ fun ColorPickerDialog(
     val initialHsv = remember(initialColor) {
         FloatArray(3).also { android.graphics.Color.colorToHSV(initialColor.toArgb(), it) }
     }
+    val initialAlpha = remember { android.graphics.Color.alpha(initialColor.toArgb()) }
     var selectedColor by remember { mutableStateOf(initialColor) }
     var hue   by remember { mutableStateOf(initialHsv[0]) }
     var sat   by remember { mutableStateOf(initialHsv[1]) }
     var value by remember { mutableStateOf(initialHsv[2]) }
+    var alpha by remember { mutableStateOf(initialAlpha) }
 
     fun rebuildColor() {
-        selectedColor = Color(android.graphics.Color.HSVToColor(floatArrayOf(hue, sat, value)))
+        selectedColor = Color(android.graphics.Color.HSVToColor( alpha, floatArrayOf(hue, sat, value)))
     }
 
     fun syncFrom(color: Color) {
@@ -45,6 +49,7 @@ fun ColorPickerDialog(
         val hsv = FloatArray(3)
         android.graphics.Color.colorToHSV(color.toArgb(), hsv)
         hue = hsv[0]; sat = hsv[1]; value = hsv[2]
+        alpha = android.graphics.Color.alpha(color.toArgb())
     }
 
     AlertDialog(
@@ -59,7 +64,7 @@ fun ColorPickerDialog(
                 // Preset swatches
                 Text("Presets", style = MaterialTheme.typography.labelMedium, color = Color(0xFF888888))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    accentPresets.forEachIndexed { i, color ->
+                    colorPresets.forEachIndexed { i, color ->
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Box(
                                 modifier = Modifier
@@ -74,15 +79,12 @@ fun ColorPickerDialog(
                                     .clickable { syncFrom(color) }
                             )
                             Spacer(Modifier.height(2.dp))
-                            Text(accentPresetLabels[i], style = MaterialTheme.typography.labelSmall, color = Color(0xFF555555), fontSize = androidx.compose.ui.unit.TextUnit(8f, androidx.compose.ui.unit.TextUnitType.Sp))
+                            Text(colorPresetLabels[i], style = MaterialTheme.typography.labelSmall, color = Color(0xFF555555), fontSize = androidx.compose.ui.unit.TextUnit(8f, androidx.compose.ui.unit.TextUnitType.Sp))
                         }
                     }
                 }
 
                 Divider(color = Color(0xFF2A2A2A))
-
-                // Custom HSV sliders
-                Text("Custom", style = MaterialTheme.typography.labelMedium, color = Color(0xFF888888))
 
                 // Hue slider
                 Text("Hue", style = MaterialTheme.typography.labelSmall, color = Color(0xFF666666))
@@ -145,13 +147,29 @@ fun ColorPickerDialog(
                     )
                 )
 
-                // Preview swatch
-                Box(
+                // Transparency
+                Text("Transparency", style = MaterialTheme.typography.labelSmall, color = Color(0xFF666666))
+                Slider(
+                    value = alpha.toFloat(),
+                    onValueChange = { alpha = it.toInt(); rebuildColor() },
+                    valueRange = 0f..255f,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(36.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(selectedColor)
+                        .height(24.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                        .drawBehind {
+                            drawRect( Color.White )
+                            drawRect( Color.Black, topLeft = Offset( 0f, 24.dp.toPx() ) )
+                        }
+                        .background(Brush.horizontalGradient(listOf(
+                            Color.Transparent,
+                            Color(android.graphics.Color.HSVToColor(floatArrayOf(hue, sat, 1f)))
+                        ))),
+                    colors = SliderDefaults.colors(
+                        thumbColor = Color.White,
+                        activeTrackColor = Color.Transparent,
+                        inactiveTrackColor = Color.Transparent
+                    )
                 )
             }
         },

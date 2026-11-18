@@ -23,7 +23,6 @@ import androidx.compose.material3.MaterialTheme
 @Composable
 fun ClockWidget(
     style: ClockStyle,
-    accent: Color,
     isDayMode: Boolean = false,
     modifier: Modifier = Modifier
 ) {
@@ -36,13 +35,13 @@ fun ClockWidget(
         }
     }
 
-    val contentColor = if (isDayMode) Color(0xFF111111) else MaterialTheme.colorScheme.onBackground
-    val subColor     = if (isDayMode) Color(0xFF888888) else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
+    val contentColor = MaterialTheme.colorScheme.primary
+    val subColor     = MaterialTheme.colorScheme.onPrimary
 
     Box(modifier = modifier) {
         when (style) {
             ClockStyle.DIGITAL -> DigitalClock(calendar, contentColor, subColor)
-            ClockStyle.ANALOG  -> AnalogClock(calendar, accent, isDayMode)
+            ClockStyle.ANALOG  -> AnalogClock(calendar, isDayMode)
         }
     }
 }
@@ -60,27 +59,27 @@ private fun DigitalClock(cal: Calendar, contentColor: Color, subColor: Color) {
         Text(
             text          = "%02d:%02d".format(hour, minute),
             color         = contentColor,
-            fontSize      = 48.sp,
+            fontSize      = 46.sp,
             fontWeight    = androidx.compose.ui.text.font.FontWeight.Light,
             letterSpacing = 1.sp
         )
         Text(
             text     = buildDateString(cal),
             color    = subColor,
-            fontSize = 12.sp
+            fontSize = 11.sp
         )
     }
 }
 
 @Composable
-private fun AnalogClock(cal: Calendar, accent: Color, isDayMode: Boolean = false) {
+private fun AnalogClock(cal: Calendar, isDayMode: Boolean = false) {
     val hour   = cal.get(Calendar.HOUR).toFloat()
     val minute = cal.get(Calendar.MINUTE).toFloat()
     val second = cal.get(Calendar.SECOND).toFloat()
 
-    val ringColor = if (isDayMode) Color(0xFFCCCCCC) else Color(0xFF2A2A2A)
-    val minuteHandColor = if (isDayMode) Color(0xFF222222) else MaterialTheme.colorScheme.onBackground
-    val pivotBg = if (isDayMode) Color(0xFFEEEEEE) else Color(0xFF1E1E1E)
+    val markColor = MaterialTheme.colorScheme.primary
+    val handColor = MaterialTheme.colorScheme.secondary
+    val ringColor = MaterialTheme.colorScheme.secondary
 
     Box(modifier = Modifier.fillMaxSize()) {
         Canvas(modifier = Modifier.fillMaxSize()) {
@@ -108,13 +107,13 @@ private fun AnalogClock(cal: Calendar, accent: Color, isDayMode: Boolean = false
                 }
                 drawLine(
                     color       = when {
-                        isQuarter -> accent.copy(alpha = 0.9f)
-                        isHour    -> if (isDayMode) Color(0xFF888888) else Color(0xFF555555)
-                        else      -> if (isDayMode) Color(0xFFCCCCCC) else Color(0xFF2E2E2E)
+                        isQuarter -> markColor.copy(alpha = 0.9f)
+                        isHour    -> handColor
+                        else      -> markColor.copy(alpha = 0.8f)
                     },
                     start       = Offset(cx + cos(angle) * radius * inner, cy + sin(angle) * radius * inner),
                     end         = Offset(cx + cos(angle) * radius * 0.96f, cy + sin(angle) * radius * 0.96f),
-                    strokeWidth = if (isQuarter) 1.5.dp.toPx() else 0.8.dp.toPx(),
+                    strokeWidth = if (isQuarter) 2.dp.toPx() else 0.8.dp.toPx(),
                     cap         = StrokeCap.Round
                 )
             }
@@ -122,7 +121,7 @@ private fun AnalogClock(cal: Calendar, accent: Color, isDayMode: Boolean = false
             // Hour hand — thick, accent tinted
             val hAngle = ((hour / 12f + minute / 720f) * 2 * Math.PI - Math.PI / 2).toFloat()
             drawLine(
-                color       = accent,
+                color       = handColor,
                 start       = Offset(cx - cos(hAngle) * radius * 0.14f, cy - sin(hAngle) * radius * 0.14f),
                 end         = Offset(cx + cos(hAngle) * radius * 0.50f, cy + sin(hAngle) * radius * 0.50f),
                 strokeWidth = 3.dp.toPx(),
@@ -132,7 +131,7 @@ private fun AnalogClock(cal: Calendar, accent: Color, isDayMode: Boolean = false
             // Minute hand
             val mAngle = ((minute / 60f) * 2 * Math.PI - Math.PI / 2).toFloat()
             drawLine(
-                color       = minuteHandColor,
+                color       = handColor,
                 start       = Offset(cx - cos(mAngle) * radius * 0.14f, cy - sin(mAngle) * radius * 0.14f),
                 end         = Offset(cx + cos(mAngle) * radius * 0.74f, cy + sin(mAngle) * radius * 0.74f),
                 strokeWidth = 1.5.dp.toPx(),
@@ -142,7 +141,7 @@ private fun AnalogClock(cal: Calendar, accent: Color, isDayMode: Boolean = false
             // Second hand — accent, hairline
             val sAngle = ((second / 60f) * 2 * Math.PI - Math.PI / 2).toFloat()
             drawLine(
-                color       = accent.copy(alpha = 0.75f),
+                color       = markColor.copy(alpha = 0.75f),
                 start       = Offset(cx - cos(sAngle) * radius * 0.22f, cy - sin(sAngle) * radius * 0.22f),
                 end         = Offset(cx + cos(sAngle) * radius * 0.88f, cy + sin(sAngle) * radius * 0.88f),
                 strokeWidth = 0.8.dp.toPx(),
@@ -150,9 +149,8 @@ private fun AnalogClock(cal: Calendar, accent: Color, isDayMode: Boolean = false
             )
 
             // Center pivot
-            drawCircle(color = pivotBg, radius = 4.dp.toPx(), center = Offset(cx, cy))
             drawCircle(
-                color  = accent,
+                color  = markColor,
                 radius = 2.5.dp.toPx(),
                 center = Offset(cx, cy),
                 style  = Stroke(1.dp.toPx())
@@ -162,7 +160,7 @@ private fun AnalogClock(cal: Calendar, accent: Color, isDayMode: Boolean = false
         // Date inset — centered, above 6 o'clock position like a real watch
         Text(
             text      = shortDateString(cal),
-            color     = if (isDayMode) Color(0xFF999999) else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f),
+            color     = MaterialTheme.colorScheme.onPrimary,
             fontSize  = 9.sp,
             letterSpacing = 1.5.sp,
             modifier  = Modifier

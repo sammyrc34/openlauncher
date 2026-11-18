@@ -34,9 +34,9 @@ fun SpeedometerWidget(
     val tickAlphaMaj = if (isDayMode) 0.50f else 0.28f
     val tickAlphaMin = if (isDayMode) 0.25f else 0.13f
 
-    val contentColor = if (isDayMode) Color(0xFF111111) else MaterialTheme.colorScheme.onBackground
+    val contentColor = MaterialTheme.colorScheme.onBackground
     val subAlpha     = if (isDayMode) 0.55f else 0.32f
-    val tickBaseColor = if (isDayMode) Color(0xFF222222) else MaterialTheme.colorScheme.onBackground
+    val tickBaseColor = MaterialTheme.colorScheme.onBackground
 
     Box(
         modifier         = modifier,
